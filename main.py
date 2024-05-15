@@ -19,12 +19,12 @@ GRID_COLOR = (200, 200, 200)
 VIEWPORT_SCROLL_SPEED = 20
 
 # Load images
-big_building_img = pygame.image.load('/asset/big_building.png')
-medium_building_img = pygame.image.load('/asset/medium_building.png')
-small_building_img = pygame.image.load('/asset/small_building.png')
-house_img = pygame.image.load('/asset/house.png')
-road_straight_img = pygame.image.load('/asset/road_straight.png')
-road_turn_img = pygame.image.load('/assetroad_turn.png')
+big_building_img = pygame.image.load('asset/big_building.png')
+medium_building_img = pygame.image.load('asset/medium_building.png')
+small_building_img = pygame.image.load('asset/small_building.png')
+house_img = pygame.image.load('asset/house.png')
+road_straight_img = pygame.image.load('asset/road_straight.png')
+road_turn_img = pygame.image.load('asset/road_turn.png')
 
 # Resize images to match the cell sizes
 big_building_img = pygame.transform.scale(big_building_img, (10 * CELL_SIZE, 5 * CELL_SIZE))

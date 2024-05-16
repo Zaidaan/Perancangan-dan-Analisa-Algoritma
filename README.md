@@ -4,3 +4,4 @@
 Sebelum menjalankan program:
 - Install python 3.11.x or above
 - Install pygame ('pip install pygame')
+- Algoritma alternatif ada di branch, 'second-branch'

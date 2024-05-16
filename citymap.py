@@ -1,149 +1,133 @@
-import pygame
-import random
 from PIL import Image, ImageDraw
+import random
+import math
+# Ukuran gambar dan jumlah langkah
+scale = 10
+width = 150 * scale
+height = 150 * scale
+max_count = 10
 
-# Inisialisasi Pygame
-pygame.init()
+streetv = Image.open("image/road.png")
+streeth = Image.open("image/curve.png")
+big_building = Image.open("image/big_building.png")
+med_building = Image.open("image/med_building.png")
+small_building= Image.open("image/small_building.png")
+house = Image.open("image/house.png")
+buildings = [big_building, med_building, small_building, house]
+tree = Image.open("image/tree.png")
+image = Image.new("RGBA", (width, height), color=(0, 255, 0))  # Warna hijau muda (RGB))
+draw = ImageDraw.Draw(image)
+trees =[tree]
+titikSudut = [(0, 0), (width - (2 * scale), height - (2 * scale)), (0, height - (2 * scale)),
+              (width - (2 * scale), 0)]
 
-# Definisi ukuran layar
-screen_width, screen_height = 800, 600
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("City Map Generator")
+direction = ["atas", "bawah", "kanan", "kiri"]
+startPoint = {"atas": "bawah", "bawah": "atas", "kanan": "kiri", "kiri": "kanan"}
+move = {"atas": [0, 2 * scale], "bawah": [0, -2 * scale], "kanan": [2 * scale, 0], "kiri": [-2 * scale, 0]}
 
-# Ukuran peta dan sel
-map_width, map_height = 150, 150
-cell_size = 50  # Ukuran sel lebih kecil untuk skala realistis
+def makeRoads(x, y, arah, count, length):
+    global width, height
+    w, h = (2 * scale, 2 * scale)
+    draw.rectangle(xy=(x, y, x + w, y + h), fill=(0, 0, 0))
+    if not count:
+        count = max_count
+        if not random.randint(0, 3):
+            titikSudut.append((x, y))
+            arah = random.choice(direction[2:] if arah == "atas" or arah == "bawah" else direction[:2])
+    if (length > 450 and (x < 0 or y < 0 or x >= width or y >= height)) or length >= 700:
+        return
+    if (x >= 0 and x < width - 2) and (y >= 0 and y < height - 2):
+        makeRoads(x + move[arah][0], y + move[arah][1], arah, count - 1, length + 1)
+    else:
+        titikSudut.append((x % width, y % height))
+        titikSudut.append(((width + x + move[arah][0]) % width, (height + y + move[arah][1]) % height))
+        makeRoads((width + x + move[arah][0]) % width, (height + y + move[arah][1]) % height, arah, max_count,
+                  length + 1)
 
-# Warna latar belakang
-background_color = (0, 255, 0)  # Hijau
+def render():
+    directions = random.choice(direction)
+    if directions == "atas":
+        x = max_count * random.randint(1, width // max_count)
+        y = 0
+    elif directions == "bawah":
+        x = max_count * random.randint(1, width // max_count)
+        y = height - 1
+    elif directions == "kanan":
+        x = 0
+        y = max_count * random.randint(1, height // max_count)
+    else:
+        x = width - 1
+        y = max_count * random.randint(1, height // max_count)
+    makeRoads(x, y, directions, max_count, 1)
 
-# Fungsi untuk menggambar grid menggunakan PIL
-def draw_grid(image):
-    draw = ImageDraw.Draw(image)
-    for x in range(0, map_width * cell_size, cell_size):
-        draw.line((x, 0, x, map_height * cell_size), fill="black")
-    for y in range(0, map_height * cell_size, cell_size):
-        draw.line((0, y, map_width * cell_size, y), fill="black")
-    return image
+def drawArea(x, y, x1, y1, side):
+    padding = 2 * scale
+    x += padding
+    y += padding
+    if x >= x1 - scale or y >= y1 - scale:
+        return
+    curX, curY = x, y
+    gedung = random.choice(buildings)
+    if gedung.size[0] < (x1 - x - scale) and gedung.size[1] < (y1 - y - scale):
+        image.paste(gedung, (x, y))
+    elif (x1 - x) > tree.size[0] and (y1 - y) > tree.size[1]:
+        image.paste(tree, (x, y))
+    while (curX + gedung.size[0] + padding) < x1 and side:
+        size = gedung.size[0] + scale
+        if y + gedung.size[0] - padding < y1:
+            drawArea(curX + size, y - padding, x1, y + gedung.size[0] - padding, False)
+        curX += size + scale
+    while (curY + gedung.size[1] + padding) < y1 and side:
+        size = gedung.size[1] + scale
+        if x + gedung.size[1] - padding < x1:
+            drawArea(x - padding, curY + size, x + gedung.size[1] - padding, y1, False)
+        curY += size + scale
 
-# Fungsi untuk menempatkan aset secara acak
-def place_assets(num_assets, size):
-    assets = []
-    for _ in range(num_assets):
-        while True:
-            row = random.randint(0, map_height - size[1] // cell_size)
-            col = random.randint(0, map_width - size[0] // cell_size)
-            if all((row + dy, col + dx) not in assets for dy in range(size[1] // cell_size) for dx in range(size[0] // cell_size)):
-                for dy in range(size[1] // cell_size):
-                    for dx in range(size[0] // cell_size):
-                        assets.append((row + dy, col + dx))
-                break
-    return [(row, col) for row, col in assets if col % (size[0] // cell_size) == 0 and row % (size[1] // cell_size) == 0]
+    if (x + gedung.size[0] - padding + scale) < x1 and (y + gedung.size[1] - padding + scale) < y1 and not side:
+        drawArea(x + gedung.size[0], y + gedung.size[1], x1, y1, True)
 
-# Fungsi untuk menggambar aset pada peta menggunakan PIL
-def draw_assets(image, buildings, roads):
-    for road in roads:
-        for (row, col) in road:
-            image.paste(road_image, (col * cell_size, row * cell_size, col * cell_size + road_size[0], row * cell_size + road_size[1]))
-    for (row, col, building_type) in buildings:
-        if building_type == 'small':
-            image.paste(small_building_image, (col * cell_size, row * cell_size, col * cell_size + small_building_size[0], row * cell_size + small_building_size[1]))
-        elif building_type == 'medium':
-            image.paste(med_building_image, (col * cell_size, row * cell_size, col * cell_size + med_building_size[0], row * cell_size + med_building_size[1]))
-        elif building_type == 'large':
-            image.paste(big_building_image, (col * cell_size, row * cell_size, col * cell_size + big_building_size[0], row * cell_size + big_building_size[1]))
-        elif building_type == 'house':
-            image.paste(house_image, (col * cell_size, row * cell_size, col * cell_size + house_size[0], row * cell_size + house_size[1]))
-    return image
+def search():
+    for idx, ver in enumerate(titikSudut):
+        minX = 0
+        nearX = width
+        nearY = height
+        minY = 0
+        maxX = 0
+        maxY = 0
+        for i in range(0, len(titikSudut)):
+            if i == idx:
+                continue
+            if titikSudut[i][0] > ver[0] and titikSudut[i][0] < nearX:
+                nearX = titikSudut[i][0]
+            if titikSudut[i][1] > ver[1] and titikSudut[i][1] < nearY:
+                nearY = titikSudut[i][1]
+            if titikSudut[i][0] >= minX and titikSudut[i][0] < ver[0]:
+                minX = titikSudut[i][0]
+                maxY = titikSudut[i][1]
+            if titikSudut[i][1] >= minY and titikSudut[i][1] < ver[1]:
+                minY = titikSudut[i][1]
+                maxX = titikSudut[i][0]
+        if minX > 0 and minY > 0:
+           print("jumpa")
+        if (minX, minY) not in titikSudut:
+            titikSudut.append((minX, minY))
+        if (maxX, maxY) not in titikSudut:
+            titikSudut.append((maxX, maxY))
+        print(ver, minX, minY)
+        drawArea(minX + scale, minY + scale, ver[0], ver[1], True)
+    if (nearX, nearY) not in titikSudut:
+        titikSudut.append((nearX, nearY))
+    if minX == 0 or minY == 0:
+        drawArea(minX, minY, ver[0], ver[1], True)
+render()
+tmp = titikSudut
 
-# Fungsi untuk menempatkan bangunan dengan jenis yang berbeda secara acak
-def place_buildings():
-    buildings = []
-    buildings += [(row, col, 'large') for (row, col) in place_assets(1, big_building_size)]
-    buildings += [(row, col, 'medium') for (row, col) in place_assets(4, med_building_size)]
-    buildings += [(row, col, 'small') for (row, col) in place_assets(10, small_building_size)]
-    buildings += [(row, col, 'house') for (row, col) in place_assets(10, house_size)]
-    return buildings
+search()
+print(titikSudut)
+print(len(titikSudut))
+for ver in titikSudut:
+    draw.rectangle(xy = (ver[0],ver[1],ver[0]+(2*scale),ver[1]+(2*scale)),fill=(0,0,0))
 
-# Fungsi untuk menempatkan jalan secara bersebelahan agar membentuk jalan yang panjang
-def place_roads(num_roads, road_length):
-    roads = []
-    for _ in range(num_roads):
-        orientation = random.choice(['horizontal', 'vertical'])
-        if orientation == 'horizontal':
-            start_row = random.randint(0, map_height - 1)
-            start_col = random.randint(0, map_width - road_length)
-            road = [(start_row, start_col + i) for i in range(road_length)]
-        else:
-            start_row = random.randint(0, map_height - road_length)
-            start_col = random.randint(0, map_width - 1)
-            road = [(start_row + i, start_col) for i in range(road_length)]
-        roads.append(road)
-    return roads
-
-# Fungsi utama
-def main():
-    running = True
-    clock = pygame.time.Clock()
-
-    # Ukuran bangunan
-    global small_building_size, med_building_size, big_building_size, house_size, road_size
-    small_building_size = (2 * cell_size, 2 * cell_size)
-    med_building_size = (5 * cell_size, 3 * cell_size)
-    big_building_size = (10 * cell_size, 5 * cell_size)
-    house_size = (cell_size, 2 * cell_size)
-    road_size = (4 * cell_size, cell_size)
-
-    # Load aset
-    global small_building_image, med_building_image, big_building_image, house_image, road_image
-    small_building_image = Image.open("small_building.png").resize(small_building_size)
-    med_building_image = Image.open("med_building.png").resize(med_building_size)
-    big_building_image = Image.open("big_building.png").resize(big_building_size)
-    house_image = Image.open("house.png").resize(house_size)
-    road_image = Image.open("road.png").resize(road_size)
-
-    # Buat gambar peta menggunakan PIL
-    city_map = Image.new('RGB', (map_width * cell_size, map_height * cell_size), background_color)
-    city_map = draw_grid(city_map)
-    
-    # Tempatkan bangunan dan jalan secara acak
-    buildings = place_buildings()
-    roads = place_roads(20, 4)  # 20 jalan dengan panjang 4
-
-    city_map = draw_assets(city_map, buildings, roads)
-
-    # Simpan peta sebagai gambar
-    city_map.save("generated_city_map.png")
-
-    # Konversi gambar PIL ke format Pygame
-    mode = city_map.mode
-    size = city_map.size
-    data = city_map.tobytes()
-    pygame_image = pygame.image.fromstring(data, size, mode)
-
-    # Koordinat untuk menggulir peta
-    scroll_x, scroll_y = 0, 0
-
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    scroll_x = min(scroll_x + 10, 0)
-                if event.key == pygame.K_RIGHT:
-                    scroll_x = max(scroll_x - 10, screen_width - map_width * cell_size)
-                if event.key == pygame.K_UP:
-                    scroll_y = min(scroll_y + 10, 0)
-                if event.key == pygame.K_DOWN:
-                    scroll_y = max(scroll_y - 10, screen_height - map_height * cell_size)
-
-        screen.fill((255, 255, 255))
-        screen.blit(pygame_image, (scroll_x, scroll_y))
-        pygame.display.flip()
-        clock.tick(30)
-
-    pygame.quit()
-
-if __name__ == "__main__":
-    main()
+#Menyimpan gambar sebagai file
+image.show()
+image.save("city_map.png")

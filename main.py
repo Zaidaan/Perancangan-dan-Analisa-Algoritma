@@ -54,8 +54,37 @@ def place_building(grid, width, height, image, surface):
             front_y = y + height
             return (x, y, width, height, front_x, front_y)
 
-def place_road(surface, x1, y1, x2, y2):
-    pygame.draw.line(surface, WHITE, (x1 * CELL_SIZE, y1 * CELL_SIZE), (x2 * CELL_SIZE, y2 * CELL_SIZE))
+def place_road(surface, path):
+    for i in range(len(path) - 1):
+        x1, y1 = path[i]
+        x2, y2 = path[i + 1]
+
+        if x1 == x2:  # Vertical road
+            for y in range(min(y1, y2), max(y1, y2) + 1):
+                surface.blit(road_straight_img, (x1 * CELL_SIZE, y * CELL_SIZE))
+        elif y1 == y2:  # Horizontal road
+            for x in range(min(x1, x2), max(x1, x2) + 1):
+                surface.blit(road_straight_img, (x * CELL_SIZE, y1 * CELL_SIZE))
+        else:  # Diagonal road
+            for x in range(min(x1, x2), max(x1, x2) + 1):
+                surface.blit(road_straight_img, (x * CELL_SIZE, y1 * CELL_SIZE))
+            for y in range(min(y1, y2), max(y1, y2) + 1):
+                surface.blit(road_straight_img, (x2 * CELL_SIZE, y * CELL_SIZE))
+
+            # Determine the correct rotation for the turn
+            if x1 < x2 and y1 < y2:
+                rotated_turn = pygame.transform.rotate(road_turn_img, 0)
+            elif x1 > x2 and y1 < y2:
+                rotated_turn = pygame.transform.rotate(road_turn_img, 90)
+            elif x1 < x2 and y1 > y2:
+                rotated_turn = pygame.transform.rotate(road_turn_img, 270)
+            else:  # (x1 > x2 and y1 > y2)
+                rotated_turn = pygame.transform.rotate(road_turn_img, 180)
+
+            surface.blit(rotated_turn, (x2 * CELL_SIZE, y2 * CELL_SIZE))
+
+
+
 
 def euclidean_distance(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
@@ -81,9 +110,9 @@ def generate_map():
     # Build the graph
     graph = {i: [] for i in range(len(placed_buildings))}
     for i in range(len(placed_buildings)):
-        x1, y1, w1, h1, front_x1, front_y1 = placed_buildings[i]
+        x1, y1, w1, h1, front_x1, front_y1= placed_buildings[i]
         for j in range(i + 1, len(placed_buildings)):
-            x2, y2, w2, h2, front_x2, front_y2= placed_buildings[j]
+            x2, y2, w2, h2, front_x2, front_y2 = placed_buildings[j]
             distance = euclidean_distance(x1, y1, x2, y2)
             graph[i].append((j, distance))
             graph[j].append((i, distance))
@@ -108,10 +137,12 @@ def generate_map():
     for edge in mst:
         x1, y1, w1, h1, front_x1, front_y1 = placed_buildings[edge[0]]
         x2, y2, w2, h2, front_x2, front_y2 = placed_buildings[edge[1]]
-        place_road(surface, x1, y1, x2, y2)
+        path = [(front_x1, front_y1), (front_x2, front_y2)]
+        place_road(surface, path)
 
     draw_grid(surface)
     return surface
+
 
 # Main loop
 def main():

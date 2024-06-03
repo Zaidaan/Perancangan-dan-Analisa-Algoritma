@@ -72,14 +72,14 @@ def place_road(surface, path):
                 surface.blit(road_straight_img, (x2 * CELL_SIZE, y * CELL_SIZE))
 
             # Determine the correct rotation for the turn
-            if x1 < x2 and y1 < y2:
-                rotated_turn = pygame.transform.rotate(road_turn_img, 0)
-            elif x1 > x2 and y1 < y2:
+            if x1 < x2:
+                rotated_turn = pygame.transform.rotate(road_turn_img, 270)
+            elif x1 > x2:
                 rotated_turn = pygame.transform.rotate(road_turn_img, 90)
-            elif x1 < x2 and y1 > y2:
+            elif x1 < x2:
                 rotated_turn = pygame.transform.rotate(road_turn_img, 270)
             else:  # (x1 > x2 and y1 > y2)
-                rotated_turn = pygame.transform.rotate(road_turn_img, 180)
+                rotated_turn = pygame.transform.rotate(road_turn_img, 90)
 
             surface.blit(rotated_turn, (x2 * CELL_SIZE, y2 * CELL_SIZE))
 
